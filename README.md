@@ -1,8 +1,8 @@
-# PixLite — Free Image Compressor
+# SlimByte — Free Image Optimizer
 
-![PixLite preview](pixlite-browser-mockup.png)
+![SlimByte preview](pixlite-browser-mockup.png)
 
-🔗 **Live:** https://nuvishh.github.io/PixLite/
+🔗 **Live:** https://nuvishh.github.io/SlimByte/
 
 Compress and resize images **right in your browser**. No upload, no signup — your photos never leave your device.
 
