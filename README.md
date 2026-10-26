@@ -1,6 +1,6 @@
 # SlimByte — Free Image Optimizer
 
-![SlimByte preview](pixlite-browser-mockup.png)
+![SlimByte preview](slimbyte-browser-mockup.png)
 
 🔗 **Live:** https://nuvishh.github.io/SlimByte/
 
