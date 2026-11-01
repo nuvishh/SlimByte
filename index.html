@@ -167,6 +167,16 @@ footer a { color: var(--accent2); text-decoration: none; font-weight: 600; }
 .xlinks a:hover { border-color: var(--accent2); transform: translateY(-2px); background: rgba(20,184,166,.1); }
 .xlinks a small { display: block; font-weight: 400; color: var(--muted); font-size: .75rem; }
 .xlinks a .ic { font-size: 1.35rem; }
+.sec-label { width: 100%; font-size: .78rem; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 700; }
+#adv-toggle { margin-top: 1.1rem; }
+#adv-settings { margin-top: 1rem; }
+.loader { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(3, 20, 28, .72); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.loader-box { width: min(320px, 86vw); background: #0b2e3d; border: 1px solid var(--border); border-radius: 18px; padding: 1.6rem 1.4rem; text-align: center; box-shadow: 0 14px 40px rgba(0, 0, 0, .4); }
+.loader-box .spinner { width: 42px; height: 42px; border-width: 4px; margin-bottom: 1rem; }
+.loader-text { font-weight: 700; margin-bottom: .3rem; }
+.loader-file { font-size: .85rem; color: var(--muted); margin-bottom: 1rem; word-break: break-all; }
+.loader-bar { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, .14); overflow: hidden; }
+#loader-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent1), var(--accent2)); transition: width .25s; }
 .hidden { display: none !important; }
 @media (max-width: 560px) {
   .field input[type="range"] { width: 150px; }
@@ -206,7 +216,8 @@ footer a { color: var(--accent2); text-decoration: none; font-weight: 600; }
   </div>
 
   <div class="card">
-    <div class="settings">
+    <div class="sec-label">Basic — size &amp; format</div>
+      <div class="settings">
       <div class="field">
         <label>Mode</label>
         <div class="fmt" id="mode">
@@ -222,11 +233,26 @@ footer a { color: var(--accent2); text-decoration: none; font-weight: 600; }
         <label>Target size (KB)</label>
         <input type="number" id="targetkb" value="100" min="5" step="5">
       </div>
+      
+      
       <div class="field">
+        <label>Format</label>
+        <div class="fmt" id="fmt">
+          <button data-f="auto" class="active">Auto</button>
+          <button data-f="image/jpeg">JPEG</button>
+          <button data-f="image/png">PNG</button>
+          <button data-f="image/webp">WebP</button>
+        </div>
+      </div>
+    </div>
+    <button class="btn ghost" id="adv-toggle" aria-expanded="false">Advanced ▾</button>
+      <div class="settings hidden" id="adv-settings">
+        <div class="sec-label">Advanced — resize, presets &amp; watermark</div>
+        <div class="field">
         <label>Max width (px)</label>
         <input type="number" id="maxw" value="1920" min="0" step="100">
       </div>
-      <div class="field">
+        <div class="field">
         <label>📐 Size preset</label>
         <select id="preset">
           <option value="" selected>None — keep aspect</option>
@@ -238,17 +264,8 @@ footer a { color: var(--accent2); text-decoration: none; font-weight: 600; }
           <option value="413x531">Passport Photo · 413×531</option>
         </select>
       </div>
-      <div class="field">
-        <label>Format</label>
-        <div class="fmt" id="fmt">
-          <button data-f="auto" class="active">Auto</button>
-          <button data-f="image/jpeg">JPEG</button>
-          <button data-f="image/png">PNG</button>
-          <button data-f="image/webp">WebP</button>
-        </div>
       </div>
-    </div>
-    <div class="wmrow">
+      <div class="wmrow hidden">
       <div class="field">
         <label>©️ Watermark text</label>
         <input type="text" id="wmtext" placeholder="e.g. © nuvish" maxlength="60">
@@ -316,7 +333,15 @@ footer a { color: var(--accent2); text-decoration: none; font-weight: 600; }
   </div>
 </div>
 
-<script>
+<div id="loader" class="loader hidden" role="status" aria-live="polite">
+    <div class="loader-box">
+      <span class="spinner"></span>
+      <div class="loader-text" id="loader-text">Compressing…</div>
+      <div class="loader-file" id="loader-file"></div>
+      <div class="loader-bar"><div id="loader-fill"></div></div>
+    </div>
+  </div>
+  <script>
 const $ = id => document.getElementById(id);
 const files = []; // {id, name, origBlob, origSize, outBlob, outSize, dims, mime, thumb, error}
 let format = 'auto';
@@ -483,6 +508,15 @@ $('fmt').addEventListener('click', e => {
 });
 $('clear').addEventListener('click', () => { files.length = 0; render(); });
 
+const advToggle = $('adv-toggle');
+if (advToggle) advToggle.addEventListener('click', () => {
+  const adv = $('adv-settings'), wm = document.querySelector('.wmrow');
+  const nowHidden = adv.classList.toggle('hidden');
+  if (wm) wm.classList.toggle('hidden', nowHidden);
+  advToggle.textContent = nowHidden ? 'Advanced \u25be' : 'Advanced \u25b4';
+  advToggle.setAttribute('aria-expanded', nowHidden ? 'false' : 'true');
+});
+
 function settings() {
   const pv = $('preset').value;
   return {
@@ -498,13 +532,29 @@ function settings() {
   };
 }
 
+const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+function showLoader(total) { const l = $('loader'); if (!l) return; l.classList.remove('hidden'); setLoader(0, total, ''); }
+function setLoader(i, total, name) {
+  const t = $('loader-text'), f = $('loader-file'), bar = $('loader-fill');
+  if (t) t.textContent = total > 1 ? 'Compressing ' + i + ' of ' + total + '…' : 'Compressing…';
+  if (f) f.textContent = name || '';
+  if (bar) bar.style.width = (total ? Math.round(i / total * 100) : 0) + '%';
+}
+function hideLoader() { const l = $('loader'); if (l) l.classList.add('hidden'); }
 async function processAll() {
   const s = settings();
   render();
-  for (const f of files) {
-    try { await compressOne(f, s); } catch (e) { f.error = true; f.errMsg = (e && e.message) || ''; }
-    render();
-  }
+  if (!files.length) return;
+  showLoader(files.length);
+  try {
+    for (let idx = 0; idx < files.length; idx++) {
+      const f = files[idx];
+      setLoader(idx + 1, files.length, f.name);
+      await nextFrame();
+      try { await compressOne(f, s); } catch (e) { f.error = true; f.errMsg = (e && e.message) || ''; }
+      render();
+    }
+  } finally { hideLoader(); }
 }
 
 function finalDims(w, h, f) { return ((f.rot || 0) % 180 !== 0) ? [h, w] : [w, h]; }
@@ -671,7 +721,10 @@ async function compressOne(f, s) {
 async function reprocessOne(f) {
   f.outBlob = null; f.outSize = null; f.thumb = null;
   render();
+  showLoader(1);
+  await nextFrame();
   try { await compressOne(f, settings()); } catch (e) { f.error = true; f.errMsg = (e && e.message) || ''; }
+  hideLoader();
   render();
 }
 
